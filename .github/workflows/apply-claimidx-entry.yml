@@ -1,0 +1,40 @@
+name: Apply ClaimIDX README entry
+on:
+  workflow_dispatch:
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: add-claimidx
+          fetch-depth: 0
+      - name: Insert ClaimIDX table row
+        run: |
+          set -euo pipefail
+          if grep -qi 'claimidx/claimidx' README.md; then
+            echo 'already present'
+          else
+            python3 - <<'PY'
+          from pathlib import Path
+          text = Path('README.md').read_text()
+          row = Path('.claimidx-entry.md').read_text().rstrip() + '\n'
+          marker = '| [CheMiguel23/MemoryMesh](https://github.com/CheMiguel23/MemoryMesh)'
+          if marker not in text:
+              raise SystemExit('marker missing')
+          Path('README.md').write_text(text.replace(marker, row + marker, 1))
+          print('patched')
+          PY
+          fi
+          rm -f .claimidx-entry.md
+          rm -f .github/workflows/apply-claimidx-entry.yml
+      - name: Commit and push
+        run: |
+          git config user.name 'Ahmi'
+          git config user.email 'ahmitdarrow@gmail.com'
+          git add -A
+          git diff --cached --quiet && echo 'no changes' && exit 0
+          git commit -m 'Add ClaimIDX to 知识、记忆与 RAG'
+          git push origin HEAD:add-claimidx
